@@ -35,12 +35,12 @@ builder.Services.AddAuthentication(options =>
 
         options.ForwardDefaultSelector = context =>
         {
-            if (AuthenticationHeaderValue.TryParse(context.Request.Headers.Authorization, out var value))
+            // Detect the HMAC scheme by prefix rather than AuthenticationHeaderValue.TryParse,
+            // which rejects the Azure-standard comma-separated HMAC parameter list the SDKs send.
+            var authorization = context.Request.Headers.Authorization.ToString();
+            if (authorization.StartsWith("HMAC-SHA256", StringComparison.OrdinalIgnoreCase))
             {
-                if (value.Scheme.Equals("HMAC-SHA256", StringComparison.OrdinalIgnoreCase))
-                {
-                    return HmacDefaults.AuthenticationScheme;
-                }
+                return HmacDefaults.AuthenticationScheme;
             }
 
             return null;

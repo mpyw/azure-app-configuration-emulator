@@ -18,6 +18,12 @@ public class ConfigurationSettingResult(
         httpContext.Response.Headers.ETag = setting.Etag;
         httpContext.Response.Headers.LastModified = setting.LastModified.ToString("R");
 
+        // The official Azure SDKs unconditionally dereference the Sync-Token
+        // response header (e.g. azure-sdk-for-go SetSetting: `SyncToken(*resp.SyncToken)`),
+        // so a missing header crashes the client with a nil dereference. Real
+        // Azure App Configuration always returns one; emit a static token here.
+        httpContext.Response.Headers["Sync-Token"] = "suve-emulator=MA==;sn=0";
+
         if (mementoDatetime is not null)
         {
             httpContext.Response.Headers["Memento-Datetime"] = mementoDatetime.Value.ToString("R");
@@ -56,6 +62,6 @@ public class ConfigurationSettingResult(
         value = setting.Value,
         tags = setting.Tags ?? new Dictionary<string, string>(),
         locked = setting.Locked,
-        last_modified = setting.LastModified.ToString("O")
+        last_modified = setting.LastModified.UtcDateTime.ToString("O")
     };
 }

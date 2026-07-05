@@ -28,25 +28,33 @@ public class HmacHandler(IOptionsMonitor<HmacOptions> options, ILoggerFactory lo
     protected override async Task<AuthenticateResult> HandleAuthenticateAsync()
     {
         Logger.LogDebug($"Checking if the request headers contains the header '{HeaderNames.Authorization}'.");
-        if (!AuthenticationHeaderValue.TryParse(Request.Headers[HeaderNames.Authorization], out var value))
+        var authorization = Request.Headers[HeaderNames.Authorization].ToString();
+        if (string.IsNullOrEmpty(authorization))
         {
             return AuthenticateResult.NoResult();
         }
 
-        Logger.LogDebug($"Checking if the scheme '{{Scheme}}' equals '{AuthenticationSchemes.HmacSha256}'.", value.Scheme);
-        if (!value.Scheme.Equals(AuthenticationSchemes.HmacSha256, StringComparison.OrdinalIgnoreCase))
+        // Parse "<scheme> <parameter>" manually. AuthenticationHeaderValue.TryParse
+        // rejects the Azure-standard comma-separated HMAC parameter list that the
+        // official SDKs send, so split on the first space instead.
+        var spaceIndex = authorization.IndexOf(' ');
+        var scheme = spaceIndex < 0 ? authorization : authorization[..spaceIndex];
+        var authParameter = spaceIndex < 0 ? string.Empty : authorization[(spaceIndex + 1)..].Trim();
+
+        Logger.LogDebug($"Checking if the scheme '{{Scheme}}' equals '{AuthenticationSchemes.HmacSha256}'.", scheme);
+        if (!scheme.Equals(AuthenticationSchemes.HmacSha256, StringComparison.OrdinalIgnoreCase))
         {
             return AuthenticateResult.NoResult();
         }
 
-        Logger.LogDebug("Checking if the parameter '{Parameter}' is null or empty.", value.Parameter);
-        if (string.IsNullOrEmpty(value.Parameter))
+        Logger.LogDebug("Checking if the parameter '{Parameter}' is null or empty.", authParameter);
+        if (string.IsNullOrEmpty(authParameter))
         {
             return AuthenticateResult.NoResult();
         }
 
-        Logger.LogDebug("Splitting the parameter '{Parameter}' on the delimiter '&'.", value.Parameter);
-        var parameters = value.Parameter.Split('&').ToDictionary(
+        Logger.LogDebug("Splitting the parameter '{Parameter}' on the delimiters ',' and '&'.", authParameter);
+        var parameters = authParameter.Split([',', '&'], StringSplitOptions.TrimEntries).ToDictionary(
             parameter => parameter[..parameter.IndexOf('=')],
             parameter => parameter[(parameter.IndexOf('=') + 1)..],
             StringComparer.OrdinalIgnoreCase);

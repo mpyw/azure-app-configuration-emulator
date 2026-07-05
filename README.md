@@ -1,5 +1,13 @@
 # Emulator for Azure App Configuration
 
+> [!NOTE]
+> This is a fork of [tnc1997/azure-app-configuration-emulator](https://github.com/tnc1997/azure-app-configuration-emulator) patched so the emulator interoperates with the **official Azure SDKs** (needed to run [suve](https://github.com/mpyw/suve)'s e2e tests offline). Upstream diverges from real Azure App Configuration in three ways that break the SDKs:
+> 1. **HMAC `Authorization` parsing** — the official SDKs send a comma-separated parameter list; upstream only accepts `&`-separated values and rejects the request via `AuthenticationHeaderValue.TryParse` before the HMAC handler ever runs. This fork parses the scheme/parameters manually and splits on both `,` and `&`.
+> 2. **`last_modified` timestamps** — upstream emits `+00:00` offsets that `System.Text.Json` escapes to `+`, which the SDKs' timestamp parser rejects. This fork serializes UTC (`Z`).
+> 3. **Missing `Sync-Token` header** — the SDKs dereference the `Sync-Token` response header unconditionally (nil-panic if absent). This fork always returns one.
+>
+> Images are published to `ghcr.io/mpyw/azure-app-configuration-emulator`. See upstream for full documentation.
+
 ![Docker Pulls](https://img.shields.io/docker/pulls/tnc1997/azure-app-configuration-emulator?link=https%3A%2F%2Fhub.docker.com%2Fr%2Ftnc1997%2Fazure-app-configuration-emulator) ![Docker Stars](https://img.shields.io/docker/stars/tnc1997/azure-app-configuration-emulator?link=https%3A%2F%2Fhub.docker.com%2Fr%2Ftnc1997%2Fazure-app-configuration-emulator)
 
 Please note that Emulator for Azure App Configuration is unofficial and not endorsed by Microsoft.
