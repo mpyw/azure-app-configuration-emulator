@@ -15,11 +15,6 @@ public class ConfigurationSettingsResult(
 {
     public async Task ExecuteAsync(HttpContext httpContext)
     {
-        // The official Azure SDKs unconditionally dereference the Sync-Token
-        // response header, so a missing header crashes the client with a nil
-        // dereference. Real Azure App Configuration always returns one.
-        httpContext.Response.Headers["Sync-Token"] = "suve-emulator=MA==;sn=0";
-
         if (mementoDatetime is not null)
         {
             httpContext.Response.Headers["Memento-Datetime"] = mementoDatetime.Value.ToString("R");

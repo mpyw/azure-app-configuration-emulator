@@ -107,6 +107,27 @@ app.UseRouting();
 app.UseAuthentication();
 app.UseAuthorization();
 
+// The official Azure SDKs dereference the Sync-Token response header
+// unconditionally (e.g. azure-sdk-for-go DeleteSetting does
+// `SyncToken(*resp.SyncToken)`), so a missing header nil-panics the client.
+// Real Azure App Configuration returns one on every response — including the
+// 204 No Content returned when deleting a non-existent key — so set it globally
+// here rather than per-result.
+app.Use(async (context, next) =>
+{
+    context.Response.OnStarting(() =>
+    {
+        if (!context.Response.Headers.ContainsKey("Sync-Token"))
+        {
+            context.Response.Headers["Sync-Token"] = "suve-emulator=MA==;sn=0";
+        }
+
+        return Task.CompletedTask;
+    });
+
+    await next();
+});
+
 app.MapGet("/kv/{**key}", ConfigurationSettingHandler.Get).RequireAuthorization();
 app.MapGet("/kv", ConfigurationSettingHandler.List).RequireAuthorization();
 app.MapPut("/kv/{**key}", ConfigurationSettingHandler.Set).RequireAuthorization();
